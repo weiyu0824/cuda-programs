@@ -3,6 +3,7 @@
 #include <cuda_runtime_api.h>
 #include <driver_types.h>
 #include <iostream>
+#include <chrono>
 
 __global__ void MatMul(float *A, float *B, float *C, int M, int N, int K){
   
@@ -14,7 +15,7 @@ __global__ void MatMul(float *A, float *B, float *C, int M, int N, int K){
     for (int seq_idx = 0; seq_idx < N; seq_idx ++){
       val += A[i * N + seq_idx] * B[j + seq_idx * N];
     }
-    C[i * M + j] = val;
+    C[i * K + j] = val;
   }
 
 } 
@@ -22,7 +23,7 @@ __global__ void MatMul(float *A, float *B, float *C, int M, int N, int K){
 void print_matrix(float* matrix, int row, int col){
     for (int i = 0; i < row; i ++) {
       for (int j = 0; j < col; j ++) {
-        int idx = i * row + j;
+        int idx = i * col + j;
         std::cout << matrix[idx] << " "; 
       }
       std::cout << std::endl;
@@ -31,9 +32,9 @@ void print_matrix(float* matrix, int row, int col){
 
 int main(){
   // Data size
-  int M = 16;
-  int N = 16;
-  int K = 16; 
+  int M = 10;
+  int N = 4;
+  int K = 4; 
   
   size_t Mat_A_bytes = M * N * sizeof(float);
   size_t Mat_B_bytes = N * K * sizeof(float);
@@ -53,13 +54,13 @@ int main(){
   // Init Data
   for (int i = 0; i < M; i ++) {
     for (int j = 0; j < N; j ++) {
-       int idx = i * M + j; 
+       int idx = i * N + j; 
        host_A[idx] = i;
     }
   } 
   for (int i = 0; i < N; i ++) {
     for (int j = 0; j < K; j ++) {
-      int idx = i * N + j;
+      int idx = i * K + j;
       host_B[idx] = i;
     }
   } 
@@ -69,9 +70,14 @@ int main(){
   cudaMemcpy(device_B, host_B, Mat_B_bytes, cudaMemcpyHostToDevice);
 
   // Lanch kernel 
-  dim3 threadsPerBlock(16, 16);
-  dim3 numBlocks(M/threadsPerBlock.x, K/threadsPerBlock.y);
-  MatMul<<<numBlocks, threadsPerBlock>>>(device_A, device_B, device_C, M, N,K);
+  dim3 blockDim(4, 4);
+  int numBlockRows = (int)ceil(M / (float)blockDim.x);
+  int numBlockCols = (int)ceil(K / (float)blockDim.y);
+  dim3 gridDim(numBlockRows, numBlockCols);
+
+  auto start = std::chrono::high_resolution_clock::now();
+  MatMul<<<gridDim, blockDim>>>(device_A, device_B, device_C, M, N, K);
+  auto stop = std::chrono::high_resolution_clock::now();
   
   // Copy back 
   cudaMemcpy(host_C, device_C, Mat_C_bytes, cudaMemcpyDeviceToHost);
@@ -82,8 +88,13 @@ int main(){
     std::cout << "Error: " << error << std::endl;
   } else {
     print_matrix(host_A, M, N);
+    std::cout << std::endl;
     print_matrix(host_B, N, K);
+    std::cout << std::endl;
     print_matrix(host_C, M, K);
+    std::cout << std::endl;
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+    std::cout << "Time spent:" << duration.count()  << "ms" << std::endl;
   }
 
   // Free memory 
