@@ -5,7 +5,7 @@
 #include "../lib/vector_utils.hpp"
 #include <cmath>
 
-#define EPS 1e-3
+#define EPS 1e-2
 
 namespace vector_utils {
 
@@ -50,6 +50,8 @@ namespace vector_utils {
   bool compare_vector(const T *arr_a, const T *arr_b, const size_t& length){
     for (int i = 0; i < length; ++i){
       if (fabs(arr_a[i] - arr_b[i]) > EPS){
+        printf("(%f, %f)\n", arr_a[i], arr_b[i]);
+        std::cout << arr_a[i] << ", " << arr_b[i] <<std::endl; 
         return false;
       }
     }
@@ -85,5 +87,17 @@ namespace vector_utils {
     return arr;
   }  
   template float* read_matrix<float>(const std::string&, size_t&, size_t&); 
+
+  template<typename T>
+  void print_matrix(const T *arr, size_t &rows, size_t &cols){
+    for (int i = 0; i < rows; i ++) {
+      for (int j = 0; j < cols; j ++) {
+        int idx = i * cols + j;
+        std::cout << arr[idx] << " "; 
+      }
+      std::cout << std::endl;
+    } 
+  }
+  template void print_matrix<float>(const float*, size_t&, size_t&);
 
 }

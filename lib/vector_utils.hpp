@@ -16,7 +16,8 @@ namespace vector_utils {
 
   template<typename T>
   T* read_matrix(const std::string& filename, size_t& rows, size_t& cols);
-  // void print_vector();
-  // bool compare_vector();
+
+  template<typename T>
+  void print_matrix(const T* arr, size_t& rows, size_t& cols);
 }
 #endif // VECTOR_UTILS_H 
