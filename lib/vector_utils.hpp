@@ -12,9 +12,10 @@ namespace vector_utils {
   void print_vector(const T* arr, size_t& length);
 
   template<typename T>
-  bool compare_vector(const T* arr_a, const T* arr_b, size_t& length);
+  bool compare_vector(const T* arr_a, const T* arr_b, const size_t& length);
 
-  // void read_matrix();
+  template<typename T>
+  T* read_matrix(const std::string& filename, size_t& rows, size_t& cols);
   // void print_vector();
   // bool compare_vector();
 }

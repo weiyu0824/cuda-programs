@@ -47,14 +47,43 @@ namespace vector_utils {
 
   
   template<typename T>
-  bool compare_vector(const T *arr_a, const T *arr_b, size_t& length){
+  bool compare_vector(const T *arr_a, const T *arr_b, const size_t& length){
     for (int i = 0; i < length; ++i){
       if (fabs(arr_a[i] - arr_b[i]) > EPS){
-        std::cout << arr_a[i] << " " << arr_b[i] << std::endl;
         return false;
       }
     }
     return true;
   }
-  template bool compare_vector<float>(const float*, const float*, size_t&);
+  template bool compare_vector<float>(const float*, const float*, const size_t&);
+
+  template<typename T>
+  T* read_matrix(const std::string& filename, size_t& rows, size_t& cols){
+     std::ifstream file(filename);
+
+    if (!file.is_open()){
+      throw std::runtime_error("Error opening the file " + filename);
+    }
+    if (!(file >> rows)) {
+      throw std::runtime_error("Error happened when reading rows");
+    }
+    if (!(file >> cols)) {
+      throw std::runtime_error("Error happened when reading cols"); 
+    }
+
+    T* arr = new T[rows * cols];
+
+    for (size_t i = 0; i < rows * cols; ++i){
+      if (!(file >> arr[i])) {
+        delete [] arr;
+        throw std::runtime_error("Error happened when reading vector");
+      }
+    }
+
+
+    // std::cout << arr[0] << " " << arr[rows * cols - 1] << std::endl;
+    return arr;
+  }  
+  template float* read_matrix<float>(const std::string&, size_t&, size_t&); 
+
 }
