@@ -6,7 +6,9 @@
 #include <driver_types.h>
 #include <iostream>
 #include <chrono>
-#define TILE_SIZE 4
+#include "../lib/vector_utils.hpp"
+
+#define TILE_SIZE 5 
 
 __global__ void MatMul(float *A, float *B, float *C, int M, int N, int K){
   // A = M x N, B = N x K  
@@ -14,26 +16,30 @@ __global__ void MatMul(float *A, float *B, float *C, int M, int N, int K){
   int blockCol = blockIdx.y;
   int threadRow = threadIdx.x; 
   int threadCol = threadIdx.y;
-  
+ 
+  // refactor
   int ARow = blockRow * TILE_SIZE + threadRow; 
   int BCol = blockCol * TILE_SIZE + threadCol;
   int CRow = ARow;
   int CCol = BCol;
 
-  float val = 0; 
-  for (int tileIdx = 0; tileIdx < (N+TILE_SIZE-1)/TILE_SIZE; tileIdx ++){
-    // printf("Block %d.%d, Thread, %d.%d\n", blockRow, blockCol, threadRow, threadCol);
-    // Cooperative load  
-    __shared__ float ASub[TILE_SIZE][TILE_SIZE];
-    __shared__ float BSub[TILE_SIZE][TILE_SIZE];
+  __shared__ float ASub[TILE_SIZE][TILE_SIZE];
+  __shared__ float BSub[TILE_SIZE][TILE_SIZE];
 
+  float val = 0; 
+  for (int tileIdx = 0; tileIdx < (int)ceil(N/(float)TILE_SIZE); tileIdx ++){
+    // Cooperative load  
     int ACol = tileIdx * TILE_SIZE + threadCol; 
     int BRow = tileIdx * TILE_SIZE + threadRow;
     if (ARow < M && ACol < N){
       ASub[threadRow][threadCol] = A[ARow * N + ACol];
+    }else{
+      ASub[threadRow][threadCol] = 0;
     }    
-    if (BRow < N && BCol < N){
+    if (BRow < N && BCol < K){
       BSub[threadRow][threadCol] = B[BRow * K + BCol];
+    }else {
+      BSub[threadRow][threadCol] = 0;
     }
     __syncthreads();
     
@@ -46,55 +52,37 @@ __global__ void MatMul(float *A, float *B, float *C, int M, int N, int K){
   }
    
   if (CRow < M && CCol < K){
-    C[CRow * blockDim.y + CCol] = val; 
+    C[CRow * K + CCol] = val; 
   }
 } 
 
-void print_matrix(float* matrix, int row, int col){
-    for (int i = 0; i < row; i ++) {
-      for (int j = 0; j < col; j ++) {
-        int idx = i * col + j;
-        std::cout << matrix[idx] << " "; 
-      }
-      std::cout << std::endl;
-    } 
-}
+int main(int argc, char **argv){
+  
+  if (argc != 4)
+    throw std::runtime_error("Expecting 3 arguments, matrix_a, matrix_b, matric_output");
 
-int main(){
   // Data size
-  int M = 10; 
-  int N = 4;
-  int K = 4; 
+  size_t M, N, K; 
+
+  // Init host memory
+  float *host_A = vector_utils::read_matrix<float>(argv[1], M, N);
+  float *host_B = vector_utils::read_matrix<float>(argv[2], N, K); 
+  float *host_ans = vector_utils::read_matrix<float>(argv[3], M, K); 
 
   size_t Mat_A_bytes = M * N * sizeof(float);
   size_t Mat_B_bytes = N * K * sizeof(float);
   size_t Mat_C_bytes = M * K * sizeof(float);
-
-  // Init host memory
-  float *host_A = (float*)malloc(Mat_A_bytes);
-  float *host_B = (float*)malloc(Mat_B_bytes);
-  float *host_C = (float*)malloc(Mat_C_bytes);
   
+  float *host_C = (float*) malloc(Mat_C_bytes);
+  
+
+
   // Init device memory
   float *device_A, *device_B, *device_C;
   cudaMalloc((void**)&device_A, Mat_A_bytes);
   cudaMalloc((void**)&device_B, Mat_B_bytes);
   cudaMalloc((void**)&device_C, Mat_C_bytes);
 
-  // Init Data
-  for (int i = 0; i < M; i ++) {
-    for (int j = 0; j < N; j ++) {
-       int idx = i * N + j; 
-       host_A[idx] = i;
-    }
-  } 
-
-  for (int i = 0; i < N; i ++) {
-    for (int j = 0; j < K; j ++) {
-      int idx = i * K + j;
-      host_B[idx] = i;
-    }
-  } 
 
   // Copy data to device
   cudaMemcpy(device_A, host_A, Mat_A_bytes, cudaMemcpyHostToDevice);
@@ -118,13 +106,16 @@ int main(){
   if (error != cudaSuccess) {
     std::cout << "Error: " << error << std::endl;
   } else {
-    print_matrix(host_A, M, N);
-    std::cout << std::endl;
-    print_matrix(host_B, N, K);
-    std::cout << std::endl;
-    print_matrix(host_C, M, K);
-    std::cout << std::endl;
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+    
+    // printf("%f, %f", host_C[0], host_C[1]);
+
+  // vector_utils::print_matrix<float>(host_ans, M, K);
+    if (vector_utils::compare_vector<float>(host_C, host_ans, M * K))
+      std::cout << "[o] ";
+    else
+      std::cout << "[x] ";
+    
     std::cout << "Time spent:" << duration.count()  << "ms" << std::endl;
   }
 
