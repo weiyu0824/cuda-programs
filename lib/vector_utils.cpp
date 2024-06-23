@@ -51,7 +51,7 @@ namespace vector_utils {
     for (int i = 0; i < length; ++i){
       if (fabs(arr_a[i] - arr_b[i]) > EPS){
         printf("(%f, %f)\n", arr_a[i], arr_b[i]);
-        std::cout << arr_a[i] << ", " << arr_b[i] <<std::endl; 
+        // std::cout << arr_a[i] << ", " << arr_b[i] <<std::endl; 
         return false;
       }
     }
