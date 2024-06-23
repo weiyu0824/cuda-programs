@@ -16,7 +16,7 @@ __global__ void MatMul(float *A, float *B, float *C, size_t M, size_t N, size_t 
   if (i < M && j < K) {
     float val = 0;
     for (int seq_idx = 0; seq_idx < N; seq_idx ++){
-      val += A[i * N + seq_idx] * B[seq_idx * N + j];
+      val += A[i * N + seq_idx] * B[seq_idx * K + j];
     }
     C[i * K + j] = val;
   }
@@ -32,9 +32,9 @@ int main(int argc, char **argv){
   size_t M, N, K;
   
   // Init host memory
-  float *host_A = vector_utils::read_matrix<float>("data/0/input0.raw", M, N); 
-  float *host_B = vector_utils::read_matrix<float>("data/0/input1.raw", N, K);
-  float *host_ans = vector_utils::read_matrix<float>("data/0/output.raw", M, K);
+  float *host_A = vector_utils::read_matrix<float>(argv[1], M, N); 
+  float *host_B = vector_utils::read_matrix<float>(argv[2], N, K);
+  float *host_ans = vector_utils::read_matrix<float>(argv[3], M, K);
 
   size_t Mat_A_bytes = M * N * sizeof(float);
   size_t Mat_B_bytes = N * K * sizeof(float);
