@@ -23,15 +23,6 @@ __global__ void MatMul(float *A, float *B, float *C, size_t M, size_t N, size_t 
   // printf("(%d, %d)", i, j);
 } 
 
-// void print_matrix(float* matrix, int row, int col){
-//     for (int i = 0; i < row; i ++) {
-//       for (int j = 0; j < col; j ++) {
-//         int idx = i * col + j;
-//         std::cout << matrix[idx] << " "; 
-//       }
-//       std::cout << std::endl;
-//     } 
-// }
 
 int main(int argc, char **argv){
 
